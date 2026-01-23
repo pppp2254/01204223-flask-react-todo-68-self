@@ -43,7 +43,10 @@ class TodoItem(db.Model):
         return {
             "id": self.id,
             "title": self.title,
-            "done": self.done
+            "done": self.done,
+            "comments": [
+                comment.to_dict() for comment in self.comments
+            ]
         }
 
 class Comment(db.Model):
