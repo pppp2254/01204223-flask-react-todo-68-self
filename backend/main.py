@@ -6,6 +6,8 @@ from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import Mapped, mapped_column
 from flask_migrate import Migrate  
+from sqlalchemy import Integer, String, ForeignKey                           
+from sqlalchemy.orm import Mapped, mapped_column, relationship                
 
 app = Flask(__name__)
 
@@ -28,11 +30,15 @@ class Base(DeclarativeBase):
 db = SQLAlchemy(app, model_class=Base)
 migrate = Migrate(app, db)    
 
+
 class TodoItem(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(100))
     done: Mapped[bool] = mapped_column(default=False)
-    
+
+    ##### เพิ่มส่วน relationship  ซึ่งตรงนี้จะไม่กระทบ schema database เลย (เพราะว่าไม่มีการ map ไปยังคอลัมน์ใดๆ)
+    comments: Mapped[list["Comment"]] = relationship(back_populates="todo")
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -40,7 +46,12 @@ class TodoItem(db.Model):
             "done": self.done
         }
 
+class Comment(db.Model):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    message: Mapped[str] = mapped_column(String(250))
+    todo_id: Mapped[int] = mapped_column(ForeignKey('todo_item.id'))
 
+    todo: Mapped["TodoItem"] = relationship(back_populates="comments")
 
 INITIAL_TODOS = [
     TodoItem(title='Learn Flask'),
@@ -78,13 +89,10 @@ def add_todo():
 
 @app.route('/api/todos/<int:id>/toggle/', methods=['PATCH'])
 def toggle_todo(id):
-    todos = [todo for todo in todo_list if todo['id'] == id]
-    if not todos:
-        return (jsonify({'error': 'Todo not found'}), 404)
-    todo = todos[0]
-    todo['done'] = not todo['done']
-    return jsonify(todo)
-
+    todo = TodoItem.query.get_or_404(id)
+    todo.done = not todo.done
+    db.session.commit()
+    return jsonify(todo.to_dict())
 
 @app.route('/api/todos/<int:id>/', methods=['DELETE'])
 def delete_todo(id):
