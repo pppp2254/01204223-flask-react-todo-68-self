@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { expect, describe, it } from 'vitest' 
-import TodoItem from '../TodoItem.jsx'
+import { expect, describe, it } from 'vitest'
+import TodoItem from '../TodoItem.jsx' 
 
 const baseTodo = {
   id: 1,
@@ -13,6 +13,18 @@ describe('TodoItem', () => {
   it('renders with no comments correctly', () => {    
     render(<TodoItem todo={baseTodo} />);
     expect(screen.getByText('Sample Todo')).toBeInTheDocument();
+    expect(screen.getByText('No comments')).toBeInTheDocument();
+  });
+
+  it('does not show no comments message when it has a comment', () => {
+    const todoWithComment = {
+      ...baseTodo,
+      comments: [
+        {id: 1, message: 'First comment'},
+      ]
+    };
+    render(<TodoItem todo={todoWithComment} />);
+    expect(screen.queryByText('No comments')).not.toBeInTheDocument();
   });
 
   it('renders with comments correctly', () => {
@@ -25,15 +37,9 @@ describe('TodoItem', () => {
     };
     render(<TodoItem todo={todoWithComment} />);
     
-    expect(screen.getByText('Sample Todo')).toBeInTheDocument();
-    
     expect(screen.getByText('First comment')).toBeInTheDocument();
     expect(screen.getByText('Another comment')).toBeInTheDocument();
-  });
-
-  it('shows "No comments" when the comment list is empty', () => {
-    render(<TodoItem todo={baseTodo} />);
     
-    expect(screen.getByText('No comments')).toBeInTheDocument();
+    expect(screen.getByText(/2/)).toBeInTheDocument();
   });
 });
