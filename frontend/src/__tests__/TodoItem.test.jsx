@@ -42,4 +42,15 @@ describe('TodoItem', () => {
     
     expect(screen.getByText(/2/)).toBeInTheDocument();
   });
+  it('makes callback to toggleDone when Toggle button is clicked', () => {
+    const onToggleDone = vi.fn();
+    render(
+      <TodoItem 
+       todo={baseTodo} 
+       toggleDone={onToggleDone} />
+    );
+    const button = screen.getByRole('button', { name: /toggle/i });
+    button.click();
+    expect(onToggleDone).toHaveBeenCalledWith(baseTodo.id);
+  });
 });
