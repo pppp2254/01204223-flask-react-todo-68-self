@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent} from '@testing-library/react'
 import { expect, describe, it } from 'vitest'
-import TodoItem from '../TodoItem.jsx' 
+import TodoItem from '../TodoItem.jsx'
+import userEvent from '@testing-library/user-event'
+
 
 const baseTodo = {
   id: 1,
@@ -52,5 +54,23 @@ describe('TodoItem', () => {
     const button = screen.getByRole('button', { name: /toggle/i });
     button.click();
     expect(onToggleDone).toHaveBeenCalledWith(baseTodo.id);
+  });
+
+  it('makes callback to addNewComment when a new comment is added', async () => {
+    const onAddNewComment = vi.fn();
+    
+    render(
+      <TodoItem 
+        todo={baseTodo} 
+        addNewComment={onAddNewComment} 
+      />
+    );
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'New comment');
+    const button = screen.getByRole('button', { name: /add comment/i });
+    fireEvent.click(button);
+
+    expect(onAddNewComment).toHaveBeenCalledWith(baseTodo.id, 'New comment');
+    expect(input.value).toBe('');
   });
 });
