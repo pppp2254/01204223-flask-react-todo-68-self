@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import { expect } from 'vitest'
+import { expect, describe, it } from 'vitest' 
 import TodoItem from '../TodoItem.jsx'
 
-const baseTodo = {             // ** TodoItem พื้นฐานสำหรับทดสอบ
+const baseTodo = {
   id: 1,
   title: 'Sample Todo',
   done: false,
@@ -11,17 +11,29 @@ const baseTodo = {             // ** TodoItem พื้นฐานสำหร�
 
 describe('TodoItem', () => {
   it('renders with no comments correctly', () => {    
-    // *** โค้ดสำหรับเทสที่เพิ่มเข้ามา
-    render(
-      <TodoItem todo={baseTodo} />
-    );
+    render(<TodoItem todo={baseTodo} />);
     expect(screen.getByText('Sample Todo')).toBeInTheDocument();
   });
-});
 
-describe('TodoItem', () => {
-  it('renders with no comments correctly', () => {
-    // เดี๋ยวจะเพิ่มโค้ดตรงนี้
+  it('renders with comments correctly', () => {
+    const todoWithComment = {
+      ...baseTodo,
+      comments: [
+        {id: 1, message: 'First comment'},
+        {id: 2, message: 'Another comment'},
+      ]
+    };
+    render(<TodoItem todo={todoWithComment} />);
+    
+    expect(screen.getByText('Sample Todo')).toBeInTheDocument();
+    
+    expect(screen.getByText('First comment')).toBeInTheDocument();
+    expect(screen.getByText('Another comment')).toBeInTheDocument();
+  });
+
+  it('shows "No comments" when the comment list is empty', () => {
+    render(<TodoItem todo={baseTodo} />);
+    
+    expect(screen.getByText('No comments')).toBeInTheDocument();
   });
 });
-
