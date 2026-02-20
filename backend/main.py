@@ -2,7 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
 import click
-
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import JWTManager
 from models import TodoItem, Comment, db, User                            
 
 app = Flask(__name__)
@@ -23,7 +24,8 @@ todo_list = [
       "done": False },
 ]
 
-
+app.config['JWT_SECRET_KEY'] = 'fdsjkfjioi2rjshr2345hrsh043j5oij5545'
+jwt = JWTManager(app)
 
 INITIAL_TODOS = [
     TodoItem(title='Learn Flask'),
@@ -36,12 +38,12 @@ with app.app_context():
              db.session.add(item)
          db.session.commit()
 '''
-         
+ 
 @app.route('/api/todos/', methods=['GET'])
+@jwt_required()
 def get_todos():
     todos = TodoItem.query.all()
     return jsonify([todo.to_dict() for todo in todos])
-
 def new_todo(data):
     return TodoItem(title=data['title'], 
                     done=data.get('done', False))
@@ -105,6 +107,7 @@ def create_user(username, full_name, password):
     db.session.commit()
     click.echo(f"User {username} created successfully.")
 
+
 @app.route('/api/login/', methods=['POST'])
 def login():
     data = request.get_json()
@@ -115,4 +118,5 @@ def login():
     if not user or not user.check_password(data['password']):
         return jsonify({'error': 'Invalid username or password'}), 401
 
-    return jsonify({'message': 'Login successful'})
+    access_token = create_access_token(identity=user.username)
+    return jsonify(access_token=access_token)
