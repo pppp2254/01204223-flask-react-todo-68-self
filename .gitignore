@@ -1,13 +1,1 @@
-venv/
-__pycache__/
-*.pyc
-instance/
-.env
-Cvenv/
-backend/path/to/venv/
-__pycache__/
-A
-A
-A
-*.db
-todos.db
+
