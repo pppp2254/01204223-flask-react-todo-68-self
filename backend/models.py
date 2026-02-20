@@ -5,23 +5,26 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from flask_bcrypt import generate_password_hash, check_password_hash
 
 class Base(DeclarativeBase):
-  pass
+    pass
 
 db = SQLAlchemy(model_class=Base) 
-
 
 class TodoItem(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(100))
     done: Mapped[bool] = mapped_column(default=False)
+    
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('user.id'), nullable=False)
+    user: Mapped["User"] = relationship(back_populates="todos")
 
-    comments: Mapped[list["Comment"]] = relationship(back_populates="todo")
+    comments: Mapped[list["Comment"]] = relationship(back_populates="todo", cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
             "id": self.id,
             "title": self.title,
             "done": self.done,
+            "user_id": self.user_id,
             "comments": [
                 comment.to_dict() for comment in self.comments
             ]
@@ -46,6 +49,8 @@ class User(db.Model):
     username: Mapped[str] = mapped_column(String(100), unique=True)
     full_name: Mapped[str] = mapped_column(String(200))
     hashed_password: Mapped[str] = mapped_column(String(100))
+    
+    todos: Mapped[list["TodoItem"]] = relationship(back_populates="user", cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)

@@ -28,6 +28,7 @@ function TodoList({ apiUrl }) {
         setTodoList([]);
       }
     } catch (err) {
+      
       setTodoList([]);
     }
   }
@@ -39,7 +40,7 @@ function TodoList({ apiUrl }) {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json' // Good practice to include
+          'Content-Type': 'application/json'
         }
       });
       
@@ -47,7 +48,6 @@ function TodoList({ apiUrl }) {
         const updatedTodo = await response.json();
         setTodoList(prev => prev.map(todo => todo.id === id ? updatedTodo : todo));
       } else {
-        // If you see this in console, the backend rejected the request
         console.error("Toggle failed with status:", response.status);
       }
     } catch (error) {
@@ -68,13 +68,13 @@ function TodoList({ apiUrl }) {
       if (response.ok) {
         setTodoList(prev => prev.filter(todo => todo.id !== id));
       } else {
-        // This matches the 500 error you are seeing in the screenshot
         console.error("Delete failed with status:", response.status);
       }
     } catch (error) {
       console.error("Network error during delete:", error);
     }
   }
+
   async function addNewTodo() {
     try {
       const response = await fetch(TODOLIST_API_URL, {
@@ -90,26 +90,29 @@ function TodoList({ apiUrl }) {
         setTodoList([...todoList, newTodo]);
         setNewTitle("");
       }
-    } catch (error) { console.error(error); }
-  }
-  async function addNewComment(todoId, newComment) { 
-  try {
-    const url = `${TODOLIST_API_URL}${todoId}/comments/`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}` 
-      },
-      body: JSON.stringify({ 'message': newComment }), 
-    });
-    if (response.ok) {
-      await fetchTodoList(); 
+    } catch (error) { 
+      console.error(error); 
     }
-  } catch (error) { 
-    console.error("Error adding comment:", error); 
   }
-}
+
+  async function addNewComment(todoId, newComment) { 
+    try {
+      const url = `${TODOLIST_API_URL}${todoId}/comments/`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}` 
+        },
+        body: JSON.stringify({ 'message': newComment }), 
+      });
+      if (response.ok) {
+        await fetchTodoList(); 
+      }
+    } catch (error) { 
+      console.error("Error adding comment:", error); 
+    }
+  }
 
   return (
     <div>
@@ -140,6 +143,13 @@ function TodoList({ apiUrl }) {
       
       <br />
       <a href="/about">About</a>
+      
+      {!username && (
+        <>
+          <br />
+          <a href="/login">Login</a>
+        </>
+      )}
     </div>
   );
 }

@@ -7,90 +7,20 @@ from flask_jwt_extended import JWTManager
 from models import TodoItem, Comment, db, User                            
 
 app = Flask(__name__)
-CORS(app)
+
+# 🔥 แก้ CORS ให้รองรับทุกอย่างที่จำเป็น
+CORS(app, 
+     origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+     supports_credentials=True)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todos.db'
-
-db.init_app(app)                                                     # แก้จาก db = SQLAlchemy(app, model_class=Base)
-migrate = Migrate(app, db)            
-
-
-todo_list = [
-    { "id": 1,
-      "title": 'Learn Flask',
-      "done": True },
-    { "id": 2,
-      "title": 'Build a Flask App',
-      "done": False },
-]
-
 app.config['JWT_SECRET_KEY'] = 'fdsjkfjioi2rjshr2345hrsh043j5oij5545'
+
+db.init_app(app)
+migrate = Migrate(app, db)
 jwt = JWTManager(app)
-
-INITIAL_TODOS = [
-    TodoItem(title='Learn Flask'),
-    TodoItem(title='Build a Flask App'),
-]
-'''
-with app.app_context():
-    if TodoItem.query.count() == 0:
-         for item in INITIAL_TODOS:
-             db.session.add(item)
-         db.session.commit()
-'''
- 
-@app.route('/api/todos/', methods=['GET'])
-@jwt_required()
-def get_todos():
-    todos = TodoItem.query.all()
-    return jsonify([todo.to_dict() for todo in todos])
-def new_todo(data):
-    return TodoItem(title=data['title'], 
-                    done=data.get('done', False))
-
-@app.route('/api/todos/', methods=['POST'])
-def add_todo():
-    data = request.get_json()
-    todo = new_todo(data)
-    if todo:
-        db.session.add(todo)                       # บรรทัดที่ปรับใหม่
-        db.session.commit()                        # บรรทัดที่ปรับใหม่ 
-        return jsonify(todo.to_dict())             # บรรทัดที่ปรับใหม่
-    else:
-        # return http response code 400 for bad requests
-        return (jsonify({'error': 'Invalid todo data'}), 400)
-
-@app.route('/api/todos/<int:todo_id>/comments/', methods=['POST'])
-def add_comment(todo_id):
-    todo_item = TodoItem.query.get_or_404(todo_id)
-
-    data = request.get_json()
-    if not data or 'message' not in data:
-        return jsonify({'error': 'Comment message is required'}), 400
-
-    comment = Comment(
-        message=data['message'],
-        todo_id=todo_item.id
-    )
-    db.session.add(comment)
-    db.session.commit()
- 
-    return jsonify(comment.to_dict())
-
-@app.route('/api/todos/<int:id>/toggle/', methods=['PATCH'])
-def toggle_todo(id):
-    todo = TodoItem.query.get_or_404(id)
-    todo.done = not todo.done
-    db.session.commit()
-    return jsonify(todo.to_dict())
-
-@app.route('/api/todos/<int:id>/', methods=['DELETE'])
-def delete_todo(id):
-    todo = TodoItem.query.get_or_404(id)
-    db.session.delete(todo)
-    db.session.commit()
-    return jsonify({'message': 'Todo deleted successfully'})
-
 
 @app.cli.command("create-user")
 @click.argument("username")
@@ -101,6 +31,7 @@ def create_user(username, full_name, password):
     if user:
         click.echo("User already exists.")
         return
+    
     user = User(username=username, full_name=full_name)
     user.set_password(password)
     db.session.add(user)
@@ -120,3 +51,86 @@ def login():
 
     access_token = create_access_token(identity=user.username)
     return jsonify(access_token=access_token)
+
+
+@app.route('/api/todos/', methods=['GET'])
+@jwt_required() 
+def get_todos():
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    
+    todos = TodoItem.query.filter_by(user_id=user.id).all()
+    return jsonify([todo.to_dict() for todo in todos])
+
+@app.route('/api/todos/', methods=['POST'])
+@jwt_required()  
+def add_todo():
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    
+    data = request.get_json()
+    if not data or 'title' not in data:
+        return jsonify({'error': 'Title is required'}), 400
+    
+    todo = TodoItem(
+        title=data['title'], 
+        done=data.get('done', False),
+        user_id=user.id 
+    )
+    db.session.add(todo)
+    db.session.commit()
+    return jsonify(todo.to_dict())
+
+@app.route('/api/todos/<int:todo_id>/comments/', methods=['POST'])
+@jwt_required() 
+def add_comment(todo_id):
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    
+    todo_item = TodoItem.query.get_or_404(todo_id)
+    
+    if todo_item.user_id != user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.get_json()
+    if not data or 'message' not in data:
+        return jsonify({'error': 'Comment message is required'}), 400
+
+    comment = Comment(
+        message=data['message'],
+        todo_id=todo_item.id
+    )
+    db.session.add(comment)
+    db.session.commit()
+ 
+    return jsonify(comment.to_dict())
+
+@app.route('/api/todos/<int:id>/toggle/', methods=['PATCH'])
+@jwt_required()  
+def toggle_todo(id):
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    
+    todo = TodoItem.query.get_or_404(id)
+    
+    if todo.user_id != user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    todo.done = not todo.done
+    db.session.commit()
+    return jsonify(todo.to_dict())
+
+@app.route('/api/todos/<int:id>/', methods=['DELETE'])
+@jwt_required() 
+def delete_todo(id):
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    
+    todo = TodoItem.query.get_or_404(id)
+    
+    if todo.user_id != user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    db.session.delete(todo)
+    db.session.commit()
+    return jsonify({'message': 'Todo deleted successfully'})
