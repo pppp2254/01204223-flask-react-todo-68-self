@@ -3,7 +3,6 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import Integer, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
-from typing import Optional
 
 class Base(DeclarativeBase):
     pass
@@ -29,8 +28,8 @@ class TodoItem(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(100))
     done: Mapped[bool] = mapped_column(default=False)
-    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('user.id'), nullable=True)
-    user: Mapped[Optional["User"]] = relationship(back_populates="todos")
+    user_id: Mapped[int] = mapped_column(ForeignKey('user.id'), nullable=False)
+    user: Mapped["User"] = relationship(back_populates="todos")
     comments: Mapped[list["Comment"]] = relationship(back_populates="todo")
 
     def to_dict(self):

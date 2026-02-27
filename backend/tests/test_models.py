@@ -1,6 +1,5 @@
 from models import User
 from models import TodoItem, Comment, db
-from http import HTTPStatus
 
 def test_check_correct_password():
     user = User()
@@ -16,7 +15,9 @@ def test_empty_todoitem(app_context):
     assert TodoItem.query.count() == 0
 
 def create_todo_item_1():
-    todo = TodoItem(title='Todo with comments', done=True)
+    from models import User
+    user = User.query.filter_by(username='test_user').first()
+    todo = TodoItem(title='Todo with comments', done=True, user_id=user.id)
     comment = Comment(message='Nested', todo=todo)
     db.session.add_all([todo, comment])
     db.session.commit()
@@ -26,12 +27,6 @@ def test_todo_to_dict_includes_nested_comments(app_context):
     todo = create_todo_item_1()
     id = todo.id
 
-    test_todo = TodoItem.query.get(id)
+    test_todo = db.session.get(TodoItem, id)
     assert len(test_todo.comments) == 1
 
-
-
-def test_get_empty_todo_items(client):
-    response = client.get('/api/todos/')
-    assert response.status_code == HTTPStatus.OK
-    assert response.get_json() == []

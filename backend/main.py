@@ -53,8 +53,11 @@ def login():
 
 
 @app.route('/api/todos/', methods=['GET'])
+@jwt_required()
 def get_todos():
-    todos = TodoItem.query.all()
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    todos = TodoItem.query.filter_by(user_id=user.id).all() if user else []
     return jsonify([todo.to_dict() for todo in todos])
 
 
@@ -71,7 +74,7 @@ def add_todo():
     todo = TodoItem(
         title=data['title'],
         done=data.get('done', False),
-        user_id=user.id if user else None
+        user_id=user.id
     )
     db.session.add(todo)
     db.session.commit()
@@ -104,7 +107,7 @@ def toggle_todo(id):
 
     todo = TodoItem.query.get_or_404(id)
 
-    if todo.user_id and todo.user_id != user.id:
+    if todo.user_id != user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
     todo.done = not todo.done
@@ -120,7 +123,7 @@ def delete_todo(id):
 
     todo = TodoItem.query.get_or_404(id)
 
-    if todo.user_id and todo.user_id != user.id:
+    if todo.user_id != user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
     db.session.delete(todo)
